@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>SYNAPTICA — Depressão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<style>
+  :root{
+    --bg-0:#07090c;
+    --bg-1:#0d1218;
+    --panel:rgba(13,18,24,0.86);
+    --line:#212a33;
+    --line-soft:#171e26;
+    --text-0:#e8edf2;
+    --text-1:#9aa7b4;
+    --text-2:#5f6c78;
+    --teal:#49d6c4;
+    --teal-dim:#2a6b64;
+    --amber:#ff9a5a;
+    --amber-dim:#7a4f30;
+    --danger:#e2607a;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+    background:var(--bg-0);
+    font-family:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    color:var(--text-0);
+    -webkit-font-smoothing:antialiased;
+  }
+  #stage{
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 90% 70% at 62% 45%, rgba(73,214,196,0.07), transparent 60%),
+      radial-gradient(ellipse 120% 90% at 20% 100%, rgba(255,154,90,0.04), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  }
+  canvas{ display:block; touch-action:none; }
+
+  /* ---------- header ---------- */
+  #header{
+    position:fixed; top:0; left:0; right:0;
+    padding:22px 26px 0 26px;
+    pointer-events:none;
+    z-index:20;
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  #brand h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:0.02em;
+    margin:0;
+    color:var(--text-0);
+  }
+  #brand h1 span{ color:var(--teal); }
+  #brand p{
+    margin:4px 0 0 0;
+    font-size:12.5px;
+    color:var(--text-1);
+    max-width:320px;
+    line-height:1.4;
+  }
+  #scope-badge{
+    pointer-events:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--text-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:5px 9px;
+    white-space:nowrap;
+    background:rgba(13,18,24,0.5);
+  }
+
+  /* ---------- hint ---------- */
+  #hint{
+    position:fixed; left:50%; bottom:112px; transform:translateX(-50%);
+    font-size:12px; color:var(--text-2);
+    letter-spacing:0.01em;
+    pointer-events:none;
+    z-index:15;
+    transition:opacity 0.8s ease;
+    text-align:center;
+  }
+  #hint.hidden{ opacity:0; }
+
+  /* ---------- symptom bar ---------- */
+  #symptom-bar-wrap{
+    position:fixed; left:0; right:0; bottom:0;
+    z-index:30;
+    padding:14px 20px 20px 20px;
+    display:flex; flex-direction:column; align-items:center;
+    pointer-events:none;
+  }
+  #symptom-label{
+    font-size:10.5px; letter-spacing:0.08em; color:var(--text-2);
+    margin-bottom:9px; font-family:'IBM Plex Mono', monospace;
+    pointer-events:none;
+  }
+  #symptom-bar{
+    display:flex; gap:7px; flex-wrap:wrap; justify-content:center;
+    max-width:920px;
+    pointer-events:auto;
+  }
+  .pill{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:12.5px;
+    color:var(--text-1);
+    background:rgba(15,20,27,0.7);
+    border:1px solid var(--line);
+    border-radius:100px;
+    padding:8px 14px;
+    cursor:pointer;
+    transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .pill:hover{ border-color:#3a4855; color:var(--text-0); }
+  .pill.active{
+    color:#1a1310;
+    background:var(--amber);
+    border-color:var(--amber);
+    font-weight:500;
+  }
+
+  /* ---------- side panel ---------- */
+  #panel{
+    position:fixed; top:0; right:0; bottom:0;
+    width:392px; max-width:92vw;
+    background:var(--panel);
+    border-left:1px solid var(--line);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    transform:translateX(100%);
+    transition:transform 0.38s cubic-bezier(.22,.68,.36,1);
+    z-index:40;
+    display:flex; flex-direction:column;
+  }
+  #panel.open{ transform:translateX(0); }
+  #panel-scroll{
+    overflow-y:auto;
+    padding:22px 22px 40px 22px;
+    flex:1;
+  }
+  #panel-scroll::-webkit-scrollbar{ width:6px; }
+  #panel-scroll::-webkit-scrollbar-thumb{ background:#28323d; border-radius:10px; }
+
+  #panel-close{
+    position:absolute; top:16px; right:16px;
+    width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line);
+    border-radius:100px;
+    background:rgba(255,255,255,0.02);
+    color:var(--text-1);
+    cursor:pointer;
+    font-size:15px;
+    z-index:2;
+    transition:color 0.15s, border-color 0.15s;
+  }
+  #panel-close:hover{ color:var(--text-0); border-color:#3a4855; }
+
+  .symptom-head{
+    padding-right:36px;
+    margin-bottom:22px;
+    border-bottom:1px solid var(--line-soft);
+    padding-bottom:18px;
+  }
+  .symptom-head .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px; letter-spacing:0.06em; color:var(--amber);
+    margin-bottom:8px;
+  }
+  .symptom-head h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:21px; margin:0 0 10px 0; line-height:1.25; font-weight:600;
+  }
+  .symptom-head p{
+    font-size:13.5px; line-height:1.6; color:var(--text-1); margin:0;
+  }
+
+  .region-card{
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:18px 18px 16px 18px;
+    margin-bottom:14px;
+    background:rgba(255,255,255,0.012);
+  }
+  .region-card:last-child{ margin-bottom:0; }
+  .region-card.single{ border:none; padding:0; padding-right:36px; background:none; }
+
+  .region-card h2, .region-card h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    margin:0 0 3px 0;
+    line-height:1.3;
+  }
+  .region-card h2{ font-size:20px; }
+  .region-card h3{ font-size:16.5px; }
+
+  .region-card .region-sub{
+    font-size:11.5px; color:var(--text-2);
+    margin-bottom:14px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  .field{ margin-bottom:14px; }
+  .field:last-of-type{ margin-bottom:0; }
+  .field .label{
+    font-size:10px; letter-spacing:0.07em; text-transform:uppercase;
+    color:var(--text-2); margin-bottom:5px; font-family:'IBM Plex Mono', monospace;
+  }
+  .field .body{ font-size:13.5px; line-height:1.62; color:#d3dae1; }
+
+  .tags{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{
+    font-size:11px; color:var(--text-1);
+    border:1px solid var(--line); border-radius:100px;
+    padding:3px 10px;
+  }
+
+  .evidence-row{
+    display:flex; align-items:center; gap:9px; margin-top:2px;
+  }
+  .evidence-bars{ display:flex; gap:3px; }
+  .evidence-bars i{
+    width:14px; height:5px; border-radius:2px; background:var(--line);
+    display:block;
+  }
+  .evidence-bars i.on{ background:var(--teal); }
+  .evidence-text{ font-size:12.5px; color:#c7d0d8; }
+
+  .caveat{
+    margin-top:16px;
+    font-size:12px; line-height:1.55; color:var(--text-1);
+    border-left:2px solid var(--amber-dim);
+    padding:8px 0 8px 12px;
+  }
+
+  .sources{ margin-top:14px; display:flex; flex-direction:column; gap:6px; }
+  .sources a{
+    font-size:11.5px; color:var(--teal);
+    text-decoration:none;
+    border-bottom:1px solid transparent;
+    line-height:1.5;
+  }
+  .sources a:hover{ border-bottom-color:var(--teal); }
+
+  .divider{ height:1px; background:var(--line-soft); margin:18px 0; border:none; }
+
+  #panel-footer{
+    padding:14px 22px;
+    border-top:1px solid var(--line);
+    font-size:11px; line-height:1.5; color:var(--text-2);
+  }
+
+  /* ---------- global footer disclaimer ---------- */
+  #footer-note{
+    position:fixed; left:22px; bottom:20px;
+    max-width:250px;
+    font-size:10.5px; line-height:1.5; color:var(--text-2);
+    z-index:14;
+    pointer-events:none;
+  }
+  @media (max-width: 720px){
+    #footer-note{ display:none; }
+  }
+
+  /* ---------- loading ---------- */
+  #loading{
+    position:fixed; inset:0; z-index:100;
+    background:var(--bg-0);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px;
+    transition:opacity 0.5s ease;
+  }
+  #loading .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--teal);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  #loading span.txt{ font-size:12px; color:var(--text-1); letter-spacing:0.04em; font-family:'IBM Plex Mono', monospace; }
+  @keyframes pulse{ 0%,100%{opacity:0.25; transform:scale(0.85);} 50%{opacity:1; transform:scale(1);} }
+
+  /* ---------- mobile ---------- */
+  @media (max-width: 640px){
+    #header{ padding:16px 16px 0 16px; }
+    #brand p{ display:none; }
+    #panel{ width:100%; max-width:100%; top:auto; height:78vh; border-left:none; border-top:1px solid var(--line); border-radius:16px 16px 0 0; }
+    #panel.open{ transform:translateY(0); }
+    #panel:not(.open){ transform:translateY(100%); }
+    #symptom-bar{ max-width:100%; justify-content:flex-start; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
+    #symptom-bar::-webkit-scrollbar{ display:none; }
+    #hint{ bottom:128px; font-size:11px; padding:0 20px; }
+  }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="dot"></div>
+  <span class="txt">carregando o modelo…</span>
+</div>
+
+<div id="stage"><canvas id="canvas"></canvas></div>
+
+<div id="header">
+  <div id="brand">
+    <h1>SYNAPTICA <span>— DEPRESSÃO</span></h1>
+    <p>Explore os circuitos cerebrais associados aos sintomas depressivos.</p>
+  </div>
+  <div id="scope-badge">módulo educacional · não diagnóstico</div>
+</div>
+
+<div id="hint">arraste para girar · role para aproximar · toque em uma região</div>
+
+<div id="symptom-bar-wrap">
+  <div id="symptom-label">EXPLORAR POR SINTOMA</div>
+  <div id="symptom-bar"></div>
+</div>
+
+<div id="panel" aria-hidden="true">
+  <button id="panel-close" aria-label="Fechar">✕</button>
+  <div id="panel-scroll"></div>
+  <div id="panel-footer">
+    Associações descritas aqui vêm de estudos populacionais e não implicam que uma única região "cause" um sintoma, nem que toda pessoa com depressão apresente exatamente o mesmo padrão.
+  </div>
+</div>
+
+<div id="footer-note">
+  Synaptica é uma ferramenta educacional de visualização científica. Não realiza diagnóstico e não substitui avaliação profissional.
+</div>
+
+<script>
+/* =========================================================================
+   SYNAPTICA — DEPRESSÃO
+   Explorador 3D educacional de circuitos cerebrais associados a depressão.
+   Dados baseados em literatura de neuroimagem/neurociência (ver fontes nos
+   cards). Simplificação didática — não representa um cérebro individual
+   nem afirma relações causais isoladas.
+   ========================================================================= */
+
+/* ---------------------------- DADOS DAS REGIÕES ---------------------------- */
+
+const REGIONS = {
+  dlpfc: {
+    name: "Córtex Pré-Frontal Dorsolateral",
+    abbr: "dlPFC",
+    bilateral: true,
+    circuit: "Rede de controle cognitivo",
+    function: "Participa do planejamento, da memória de trabalho, da tomada de decisão e do controle cognitivo — inclusive da regulação \"de cima para baixo\" de reações emocionais geradas em regiões mais profundas do cérebro, como a amígdala.",
+    relation: "Estudos de neuroimagem funcional descrevem, com frequência, menor atividade (hipoatividade) do dlPFC em pessoas com depressão durante tarefas de controle cognitivo, muitas vezes acompanhada de maior atividade em regiões límbicas.",
+    symptomsText: "Dificuldade de concentração e atenção, redução da motivação e dificuldades na regulação de emoções.",
+    explanation: "É útil pensar no dlPFC como parte de um sistema de \"controle executivo\" que ajuda a direcionar o foco e conter reações emocionais automáticas. Quando esse circuito está menos ativo, tarefas que exigem atenção sustentada podem ficar mais custosas.",
+    evidence: 3,
+    evidenceLabel: "associação bem estudada",
+    sources: [
+      { label: "Cognitive control & dlPFC in depression (2025)", url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12657566/" },
+      { label: "NIMH — Depression (visão geral)", url: "https://www.nimh.nih.gov/topics/topic-page-depression" }
+    ],
+    pos: [0.66, 0.34, 1.05]
+  },
+  mpfc: {
+    name: "Córtex Pré-Frontal Medial",
+    abbr: "mPFC",
+    bilateral: false,
+    circuit: "Rede de modo padrão (default mode network)",
+    function: "Participa do processamento autorreferencial — pensar sobre si mesmo, suas intenções e seu estado emocional — e é um dos nós centrais da rede de modo padrão, ativa quando a mente está \"em repouso\" ou voltada para dentro.",
+    relation: "Revisões de neuroimagem associam atividade alterada do mPFC, especialmente em suas porções ventrais, a maior processamento autorreferencial negativo e a maior tendência à ruminação em pessoas com depressão.",
+    symptomsText: "Ruminação, humor deprimido e, por suas conexões com o estriado, redução da motivação.",
+    explanation: "O mPFC ajuda a construir a narrativa que fazemos sobre nós mesmos. Alterações em sua atividade e conectividade têm sido associadas a uma tendência de essa narrativa ficar presa em ciclos de pensamento negativo — a ruminação.",
+    evidence: 2,
+    evidenceLabel: "associação relevante",
+    sources: [
+      { label: "Self-referential processing & rumination in MDD (review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC3794427/" },
+      { label: "Default-mode network & rumination in MDD (review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4524294" }
+    ],
+    pos: [0.0, 0.18, 1.42]
+  },
+  ofc: {
+    name: "Córtex Orbitofrontal",
+    abbr: "OFC",
+    bilateral: true,
+    circuit: "Circuito de recompensa",
+    function: "Participa da avaliação do valor de estímulos e recompensas, da tomada de decisão baseada nesse valor e do aprendizado associado a experiências prazerosas.",
+    relation: "Estudos de conectividade descrevem alterações entre o OFC e o estriado ventral, bem como entre porções do cingulado anterior e o OFC, em pessoas com depressão durante o processamento de recompensas.",
+    symptomsText: "Anedonia e redução da motivação para buscar recompensas.",
+    explanation: "Se o núcleo accumbens \"sinaliza\" que algo é recompensador, o OFC ajuda a avaliar o quanto essa recompensa vale e a guiar a decisão de buscá-la de novo. Alterações nessa rede têm sido associadas à dificuldade de sentir e antecipar prazer.",
+    evidence: 2,
+    evidenceLabel: "associação relevante",
+    sources: [
+      { label: "Reward processing meta-analysis in depression", url: "https://www.medrxiv.org/content/10.1101/2022.12.07.22283197.full.pdf" },
+      { label: "Rolls et al. — ACC/OFC connectivity in depression", url: "https://www.oxcns.org/papers/596%20Rolls%20et%20al%202019%20Anterior%20Cingulate%20Cortex%20and%20Depression.pdf" }
+    ],
+    pos: [0.52, -0.58, 1.12]
+  },
+  acc: {
+    name: "Córtex Cingulado Anterior",
+    abbr: "ACC (destaque: região subgenual)",
+    bilateral: false,
+    circuit: "Circuito de regulação emocional",
+    function: "Monitora conflitos entre pensamentos e ações, integra cognição e emoção, e participa da regulação do afeto. Sua porção subgenual (abaixo do joelho do corpo caloso) tem conexões densas com regiões límbicas como a amígdala e o hipotálamo.",
+    relation: "A região cingulada anterior subgenual está entre as áreas mais consistentemente associadas à depressão em estudos de neuroimagem funcional e metabólica, e é um dos alvos investigados em estimulação cerebral profunda para depressão resistente ao tratamento.",
+    symptomsText: "Humor deprimido, processamento emocional negativo e, em sua porção mais dorsal, dificuldades de controle cognitivo.",
+    explanation: "O ACC funciona como um ponto de encontro entre \"pensar\" e \"sentir\". Sua porção subgenual, em particular, aparece de forma muito consistente em estudos sobre depressão — por isso é um dos alvos mais estudados de neuromodulação nessa condição.",
+    evidence: 3,
+    evidenceLabel: "associação bem estudada",
+    sources: [
+      { label: "Mayberg — Deep brain stimulation for treatment-resistant depression", url: "https://doi.org/10.1016/j.neuron.2005.02.014" },
+      { label: "Drevets — The subgenual anterior cingulate cortex in mood disorders", url: "https://doi.org/10.1017/S1092852900013754" }
+    ],
+    pos: [0.0, -0.16, 0.86]
+  },
+  amygdala: {
+    name: "Amígdala",
+    abbr: "Amígdala",
+    bilateral: true,
+    circuit: "Circuito de processamento emocional",
+    function: "Detecta estímulos emocionalmente relevantes, sobretudo sinais de ameaça, e participa da consolidação de memórias com forte carga emocional.",
+    relation: "Estudos descrevem maior reatividade da amígdala a estímulos negativos em pessoas com depressão. Achados sobre alterações de volume são mais heterogêneos entre estudos do que os achados de reatividade funcional.",
+    symptomsText: "Processamento emocional negativo, humor deprimido e, por sua interação com o hipocampo, viés de memória para conteúdos negativos.",
+    explanation: "A amígdala funciona como um \"alarme\" para estímulos emocionalmente relevantes. Uma reatividade aumentada a informações negativas, associada a menor regulação vinda do córtex pré-frontal, tem sido relacionada a uma tendência de processar o mundo de forma mais negativa.",
+    evidence: 2,
+    evidenceLabel: "associação relevante",
+    sources: [
+      { label: "Hippocampal & amygdalar volumes in MDD (targeted review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7513405" },
+      { label: "Amygdala volume meta-analysis in depression", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2739676" }
+    ],
+    pos: [0.56, -0.34, 0.14]
+  },
+  hippocampus: {
+    name: "Hipocampo",
+    abbr: "Hipocampo",
+    bilateral: true,
+    circuit: "Circuito límbico / memória",
+    function: "Participa da formação de memórias declarativas e episódicas, da integração de contexto e do controle do eixo do estresse, incluindo o feedback do cortisol.",
+    relation: "Volume hipocampal reduzido é um dos achados estruturais mais replicados — embora não universal — em depressão, sobretudo em quadros recorrentes ou de longa duração. Alterações na conectividade entre hipocampo e amígdala foram associadas a viés de memória para conteúdo negativo.",
+    symptomsText: "Alterações de memória e maior tendência a recordar conteúdos negativos.",
+    explanation: "O hipocampo ajuda a arquivar experiências no contexto certo. Alterações em sua estrutura e em sua comunicação com a amígdala têm sido associadas tanto a dificuldades de memória quanto a uma tendência de reter mais fortemente memórias negativas.",
+    evidence: 3,
+    evidenceLabel: "associação bem estudada",
+    sources: [
+      { label: "Hippocampal & amygdalar volumes in MDD (targeted review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7513405" },
+      { label: "Amygdala-hippocampal network & emotional memory in depression", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4172604" }
+    ],
+    pos: [0.66, -0.46, -0.26]
+  },
+  nacc: {
+    name: "Estriado Ventral / Núcleo Accumbens",
+    abbr: "NAc",
+    bilateral: true,
+    circuit: "Circuito de recompensa",
+    function: "É um dos principais centros do circuito de recompensa do cérebro, envolvido na antecipação e na resposta a estímulos prazerosos, e na motivação para buscá-los.",
+    relation: "A redução de atividade e conectividade do núcleo accumbens durante a antecipação e o recebimento de recompensas está entre os achados mais consistentes associados à anedonia em depressão, em estudos humanos e modelos animais.",
+    symptomsText: "Anedonia e redução da motivação.",
+    explanation: "Se o cérebro tem um \"sistema de recompensa\", o núcleo accumbens é um de seus principais nós. Respostas reduzidas nessa região durante situações potencialmente prazerosas têm sido associadas à dificuldade de sentir prazer e de se sentir motivado a buscar experiências recompensadoras.",
+    evidence: 3,
+    evidenceLabel: "associação bem estudada",
+    sources: [
+      { label: "Nucleus accumbens & anhedonia circuitry (review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4626008/" },
+      { label: "Ventral striatum as DBS target for treatment-resistant depression", url: "https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2023.1100609/full" }
+    ],
+    pos: [0.38, -0.26, 0.62]
+  },
+  insula: {
+    name: "Ínsula Anterior",
+    abbr: "Ínsula",
+    bilateral: true,
+    circuit: "Circuito de saliência / interocepção",
+    function: "Participa da interocepção — a percepção de estados internos do corpo, como batimentos cardíacos ou tensão muscular — e da integração de sinais corporais com estados emocionais.",
+    relation: "Estudos descrevem atividade alterada na ínsula durante tarefas de atenção interoceptiva em pessoas com depressão, e maior conectividade entre a ínsula e regiões límbicas foi associada à gravidade dos sintomas em alguns estudos. Os achados ainda são menos consistentes do que os observados para outras regiões deste mapa.",
+    symptomsText: "Processamento emocional negativo, incluindo sintomas somáticos associados ao humor.",
+    explanation: "A ínsula ajuda o cérebro a \"sentir\" o corpo por dentro. Alterações em como ela processa esses sinais internos têm sido associadas a mudanças na forma como emoções negativas são percebidas e vivenciadas fisicamente.",
+    evidence: 1,
+    evidenceLabel: "evidência ainda em investigação",
+    sources: [
+      { label: "Insula & interoception in depression", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4048794" },
+      { label: "Avery et al. — Interoceptive activity & connectivity in MDD (2014)", url: "https://scienceofbehaviorchange.org/wp-content/uploads/2017/11/Avery-et-al.-2014-Major-depressive-disorder-is-associated-with-abnormal-interoceptive-activity-and-functional-connectivity-in-the-in-1.pdf" }
+    ],
+    pos: [0.98, 0.0, 0.28]
+  },
+  thalamus: {
+    name: "Tálamo",
+    abbr: "Tálamo",
+    bilateral: false,
+    circuit: "Circuito de relé sensorial e atencional",
+    function: "Funciona como uma estação de retransmissão para quase toda informação sensorial a caminho do córtex, além de participar de circuitos que conectam regiões corticais e subcorticais entre si.",
+    relation: "Porções mediodorsais do tálamo aparecem em estudos de conectividade da rede de modo padrão relacionados à ruminação, e o tálamo também participa de circuitos de atenção junto a regiões pré-frontais.",
+    symptomsText: "Ruminação e dificuldades de atenção/concentração.",
+    explanation: "Por atuar como um \"centro de distribuição\" de sinais entre regiões corticais e subcorticais, alterações na conectividade do tálamo podem influenciar como circuitos de atenção e de pensamento autorreferencial se comunicam entre si.",
+    evidence: 1,
+    evidenceLabel: "evidência ainda em investigação",
+    sources: [
+      { label: "Default-mode network, thalamus & rumination in MDD (review)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4524294" }
+    ],
+    pos: [0.0, 0.0, -0.02]
+  }
+};
+
+const SYMPTOMS = [
+  {
+    id: "humor",
+    label: "Humor deprimido",
+    description: "Sensação persistente de tristeza, vazio ou desânimo. Estudos de neuroimagem associam esse estado a alterações em circuitos que conectam regiões pré-frontais, o cingulado anterior e a amígdala — estruturas envolvidas na geração e na regulação de emoções.",
+    regions: ["dlpfc", "mpfc", "acc", "amygdala"]
+  },
+  {
+    id: "anedonia",
+    label: "Anedonia",
+    description: "Redução da capacidade de sentir prazer ou interesse em atividades antes recompensadoras. Associada a alterações no circuito de recompensa, especialmente no estriado ventral / núcleo accumbens e em suas conexões com regiões pré-frontais.",
+    regions: ["nacc", "ofc", "mpfc"]
+  },
+  {
+    id: "motivacao",
+    label: "Motivação",
+    description: "Menor iniciativa para buscar ou se engajar em atividades. Compartilha parte do circuito da anedonia — o sistema de recompensa — junto a regiões pré-frontais envolvidas em planejamento e avaliação de valor.",
+    regions: ["nacc", "ofc", "mpfc", "dlpfc"]
+  },
+  {
+    id: "atencao",
+    label: "Atenção / concentração",
+    description: "Dificuldade em manter o foco ou processar informações com a mesma eficiência de antes. Associada a alterações em redes de controle cognitivo, sem que isso signifique que uma única região seja responsável pelo sintoma.",
+    regions: ["dlpfc", "acc", "thalamus"]
+  },
+  {
+    id: "memoria",
+    label: "Memória",
+    description: "Mudanças na formação ou recuperação de memórias, incluindo uma tendência maior a lembrar conteúdos negativos. Envolve principalmente o hipocampo e suas conexões com regiões límbicas.",
+    regions: ["hippocampus", "amygdala"]
+  },
+  {
+    id: "emocional",
+    label: "Processamento emocional",
+    description: "Maior reatividade a estímulos negativos e dificuldade em regular essa reatividade. Envolve amígdala, cingulado anterior, ínsula e regiões pré-frontais de regulação emocional.",
+    regions: ["amygdala", "acc", "dlpfc", "mpfc", "insula"]
+  },
+  {
+    id: "ruminacao",
+    label: "Ruminação",
+    description: "Pensamentos repetitivos e autofocados sobre o próprio sofrimento e suas causas. Associada à rede de modo padrão, sobretudo ao córtex pré-frontal medial e à sua conectividade com o tálamo.",
+    regions: ["mpfc", "thalamus"]
+  }
+];
+
+/* ---------------------------- ESTADO ---------------------------- */
+
+let selection = null; // { type: 'region'|'symptom', id }
+let hasInteracted = false;
+
+/* ---------------------------- THREE.JS SETUP ---------------------------- */
+
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+let camDistance = 6.6;
+camera.position.set(0, 0, camDistance);
+
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* lights */
+scene.add(new THREE.AmbientLight(0x3a4652, 1.1));
+const keyLight = new THREE.DirectionalLight(0x9fd8ff, 0.9);
+keyLight.position.set(3, 4, 5);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xff9a5a, 0.28);
+fillLight.position.set(-4, -2, -3);
+scene.add(fillLight);
+const camLight = new THREE.PointLight(0x49d6c4, 0.5, 20);
+camera.add(camLight);
+scene.add(camera);
+
+/* group holding the whole brain + markers, rotated by user input */
+const brainGroup = new THREE.Group();
+scene.add(brainGroup);
+
+/* ---------------------------- BRAIN MODEL ---------------------------- */
+
+const brainModel = new THREE.Group();
+brainGroup.add(brainModel);
+let modelReady = false;
+let modelFailed = false;
+
+function loadBrainModel(){
+  if(window.location.protocol === 'file:'){
+    modelFailed = true;
+    document.getElementById('loading').querySelector('.txt').textContent = 'abra pelo servidor local para carregar o modelo';
+    return;
+  }
+  const loader = new THREE.GLTFLoader();
+  loader.load(
+    './brain-model.glb',
+    (gltf) => {
+      const model = gltf.scene;
+      model.scale.setScalar(2.1);
+      model.traverse((object) => {
+        if(!object.isMesh) return;
+        object.castShadow = false;
+        object.receiveShadow = true;
+        object.material.side = THREE.DoubleSide;
+        object.material.transparent = true;
+        object.material.opacity = 0.72;
+        object.material.depthWrite = true;
+      });
+      brainModel.add(model);
+      modelReady = true;
+      document.getElementById('loading').querySelector('.txt').textContent = 'modelo carregado';
+      boot();
+    },
+    undefined,
+    () => {
+      modelFailed = true;
+      document.getElementById('loading').querySelector('.txt').textContent = 'não foi possível carregar o modelo';
+      boot();
+    }
+  );
+}
+
+loadBrainModel();
+
+/* ---------------------------- REGION MARKERS ---------------------------- */
+
+const markerHaloGeo = new THREE.SphereGeometry(1, 16, 12);
+const markerDotGeo = new THREE.SphereGeometry(1, 20, 16);
+const markerHitGeo = new THREE.SphereGeometry(1, 8, 6);
+
+const markers = []; // { id, group, dotMat, haloMat, scaleTarget:number, colorTarget, dot, halo }
+
+function addMarker(id, x, y, z){
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+
+  const dotMat = new THREE.MeshBasicMaterial({ color: 0x49d6c4, transparent: true, opacity: 0.95, depthTest: false });
+  const dot = new THREE.Mesh(markerDotGeo, dotMat);
+  dot.renderOrder = 10;
+  dot.scale.setScalar(0.052);
+  group.add(dot);
+
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0x49d6c4, transparent: true, opacity: 0.18, depthTest: false, depthWrite: false });
+  const halo = new THREE.Mesh(markerHaloGeo, haloMat);
+  halo.renderOrder = 9;
+  halo.scale.setScalar(0.11);
+  group.add(halo);
+
+  const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const hit = new THREE.Mesh(markerHitGeo, hitMat);
+  hit.scale.setScalar(0.2);
+  hit.userData.regionId = id;
+  group.add(hit);
+
+  brainGroup.add(group);
+
+  const rec = {
+    id, group, dot, halo, hit,
+    baseScale: 1,
+    curScale: 1,
+    targetScale: 1,
+    state: 'neutral' // neutral | active | dim
+  };
+  markers.push(rec);
+  return rec;
+}
+
+Object.keys(REGIONS).forEach(id => {
+  const r = REGIONS[id];
+  const [x, y, z] = r.pos;
+  addMarker(id, x, y, z);
+  if(r.bilateral){
+    addMarker(id, -x, y, z);
+  }
+});
+
+/* colors */
+const COL_TEAL = new THREE.Color(0x49d6c4);
+const COL_AMBER = new THREE.Color(0xff9a5a);
+const COL_DIM = new THREE.Color(0x3a4552);
+
+function applySelectionToMarkers(){
+  markers.forEach(m => {
+    let state = 'neutral';
+    if(selection){
+      if(selection.type === 'region'){
+        state = (m.id === selection.id) ? 'active' : 'dim';
+      } else if(selection.type === 'symptom'){
+        const s = SYMPTOMS.find(s => s.id === selection.id);
+        state = (s && s.regions.includes(m.id)) ? 'active' : 'dim';
+      }
+    }
+    m.state = state;
+    const col = state === 'active' ? COL_AMBER : (state === 'dim' ? COL_DIM : COL_TEAL);
+    m.dot.material.color.copy(col);
+    m.halo.material.color.copy(col);
+    m.dot.material.opacity = state === 'dim' ? 0.45 : 0.95;
+    m.halo.material.opacity = state === 'active' ? 0.32 : (state === 'dim' ? 0.06 : 0.16);
+    m.targetScale = state === 'active' ? 1.7 : (state === 'dim' ? 0.75 : 1.0);
+  });
+}
+applySelectionToMarkers();
+
+/* ---------------------------- INTERACTION: DRAG / ZOOM ---------------------------- */
+
+let isDragging = false;
+let lastX = 0, lastY = 0;
+let rotY = 0.5, rotX = -0.08;
+let autoRotate = true;
+
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+let hoveredId = null;
+let downX = 0, downY = 0, downMoved = false;
+
+function setHint(hide){
+  const h = document.getElementById('hint');
+  if(hide) h.classList.add('hidden');
+}
+
+function onPointerDown(e){
+  isDragging = true;
+  hasInteracted = true;
+  autoRotate = false;
+  setHint(true);
+  lastX = e.clientX; lastY = e.clientY;
+  downX = e.clientX; downY = e.clientY;
+  downMoved = false;
+  canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+}
+
+function onPointerMove(e){
+  if(isDragging){
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    if(Math.abs(e.clientX - downX) > 4 || Math.abs(e.clientY - downY) > 4) downMoved = true;
+    rotY += dx * 0.0055;
+    rotX += dy * 0.0045;
+    rotX = Math.max(-1.05, Math.min(1.05, rotX));
+    lastX = e.clientX; lastY = e.clientY;
+  } else {
+    updateHover(e.clientX, e.clientY);
+  }
+}
+
+function onPointerUp(e){
+  if(isDragging && !downMoved){
+    handleClick(e.clientX, e.clientY);
+  }
+  isDragging = false;
+}
+
+function updateHover(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects(markers.map(m => m.hit));
+  const id = hits.length ? hits[0].object.userData.regionId : null;
+  if(id !== hoveredId){
+    hoveredId = id;
+    canvas.style.cursor = id ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
+  }
+}
+
+function handleClick(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects(markers.map(m => m.hit));
+  if(hits.length){
+    const id = hits[0].object.userData.regionId;
+    if(selection && selection.type === 'region' && selection.id === id){
+      setSelection(null);
+    } else {
+      setSelection({ type: 'region', id });
+    }
+  }
+}
+
+canvas.addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  hasInteracted = true;
+  autoRotate = false;
+  setHint(true);
+  camDistance += e.deltaY * 0.0035;
+  camDistance = Math.max(3.6, Math.min(10.5, camDistance));
+}, { passive: false });
+
+/* simple pinch-to-zoom for touch */
+let pinchStartDist = null;
+let pinchStartCam = camDistance;
+window.addEventListener('touchmove', (e) => {
+  if(e.touches.length === 2){
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(pinchStartDist === null){
+      pinchStartDist = dist;
+      pinchStartCam = camDistance;
+    } else {
+      const scale = pinchStartDist / dist;
+      camDistance = Math.max(3.6, Math.min(10.5, pinchStartCam * scale));
+    }
+    hasInteracted = true;
+    autoRotate = false;
+    setHint(true);
+  }
+}, { passive: false });
+window.addEventListener('touchend', (e) => {
+  if(e.touches.length < 2) pinchStartDist = null;
+});
+
+canvas.style.cursor = 'grab';
+
+/* ---------------------------- PANEL RENDERING ---------------------------- */
+
+const panel = document.getElementById('panel');
+const panelScroll = document.getElementById('panel-scroll');
+const panelClose = document.getElementById('panel-close');
+
+function evidenceBars(level){
+  let html = '<div class="evidence-bars">';
+  for(let i=1;i<=3;i++){
+    html += `<i class="${i<=level ? 'on' : ''}"></i>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function regionCardHTML(id, asSub){
+  const r = REGIONS[id];
+  const tag = asSub ? 'h3' : 'h2';
+  return `
+    <div class="region-card ${asSub ? '' : 'single'}">
+      <${tag}>${r.name}</${tag}>
+      <div class="region-sub">${r.abbr}${r.bilateral ? ' · bilateral' : ''} · ${r.circuit}</div>
+
+      <div class="field">
+        <div class="label">Função normal</div>
+        <div class="body">${r.function}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">Relação estudada com a depressão</div>
+        <div class="body">${r.relation}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">Sintomas / dimensões relacionadas</div>
+        <div class="body">${r.symptomsText}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">Em termos simples</div>
+        <div class="body">${r.explanation}</div>
+      </div>
+
+      <div class="field">
+        <div class="label">Nível de evidência</div>
+        <div class="evidence-row">
+          ${evidenceBars(r.evidence)}
+          <span class="evidence-text">${r.evidenceLabel}</span>
+        </div>
+      </div>
+
+      <div class="caveat">
+        Esta associação não significa que a ${r.abbr} isoladamente "causa" o sintoma. Depressão é entendida como um fenômeno de circuitos distribuídos, não de uma única estrutura.
+      </div>
+
+      <div class="sources">
+        ${r.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">↗ ${s.label}</a>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderPanel(){
+  if(!selection){
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+    return;
+  }
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+
+  if(selection.type === 'region'){
+    panelScroll.innerHTML = regionCardHTML(selection.id, false);
+  } else {
+    const s = SYMPTOMS.find(s => s.id === selection.id);
+    let html = `
+      <div class="symptom-head">
+        <div class="eyebrow">EXPLORAR POR SINTOMA</div>
+        <h2>${s.label}</h2>
+        <p>${s.description}</p>
+      </div>
+    `;
+    html += s.regions.map(id => regionCardHTML(id, true)).join('');
+    panelScroll.innerHTML = html;
+  }
+  panelScroll.scrollTop = 0;
+}
+
+function setSelection(sel){
+  selection = sel;
+  applySelectionToMarkers();
+  renderPanel();
+  renderSymptomBar();
+}
+
+panelClose.addEventListener('click', () => setSelection(null));
+
+panel.addEventListener('transitionend', () => {
+  if(!panel.classList.contains('open')) panel.setAttribute('inert', '');
+  else panel.removeAttribute('inert');
+});
+
+/* ---------------------------- SYMPTOM BAR ---------------------------- */
+
+const symptomBar = document.getElementById('symptom-bar');
+
+function renderSymptomBar(){
+  symptomBar.innerHTML = '';
+  SYMPTOMS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'pill' + (selection && selection.type === 'symptom' && selection.id === s.id ? ' active' : '');
+    btn.textContent = s.label;
+    btn.addEventListener('click', () => {
+      hasInteracted = true;
+      setHint(true);
+      if(selection && selection.type === 'symptom' && selection.id === s.id){
+        setSelection(null);
+      } else {
+        setSelection({ type: 'symptom', id: s.id });
+      }
+    });
+    symptomBar.appendChild(btn);
+  });
+}
+renderSymptomBar();
+
+/* ---------------------------- ANIMATION LOOP ---------------------------- */
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  if(autoRotate){
+    rotY += 0.0016;
+  }
+
+  brainGroup.rotation.y += (rotY - brainGroup.rotation.y) * 0.14;
+  brainGroup.rotation.x += (rotX - brainGroup.rotation.x) * 0.14;
+
+  camera.position.z += (camDistance - camera.position.z) * 0.12;
+  camera.lookAt(0, 0, 0);
+
+  markers.forEach(m => {
+    m.curScale += (m.targetScale - m.curScale) * 0.18;
+    m.dot.scale.setScalar(0.052 * m.curScale * (m.id === hoveredId ? 1.3 : 1));
+    m.halo.scale.setScalar(0.11 * m.curScale * (0.9 + 0.1 * Math.sin(Date.now()*0.003)));
+  });
+
+  renderer.render(scene, camera);
+}
+
+/* ---------------------------- BOOT ---------------------------- */
+
+function boot(){
+  if(booted || (!modelReady && !modelFailed)) return;
+  booted = true;
+  const loading = document.getElementById('loading');
+  loading.style.opacity = '0';
+  setTimeout(() => { loading.style.display = 'none'; }, 500);
+  animate();
+}
+
+let booted = false;
+if(document.readyState === 'complete'){
+  boot();
+} else {
+  window.addEventListener('load', boot);
+}
+</script>
+</body>
+</html>
