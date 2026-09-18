@@ -22,7 +22,8 @@
     --teal:#49d6c4;
     --teal-dim:#2a6b64;
     --amber:#ff9a5a;
-    --amber-dim:#7a4f30;
+    --yellow: #ffd43b;
+    --amber-dim:#030302;
     --danger:#e2607a;
     --radius:3px;
   }
@@ -34,6 +35,11 @@
     color:var(--text-0);
     -webkit-font-smoothing:antialiased;
   }
+
+  #brand h1 span {
+  color: var(--yellow);
+}
+
   #stage{
     position:fixed; inset:0;
     background:
@@ -166,6 +172,10 @@
     transition:color 0.15s, border-color 0.15s;
   }
   #panel-close:hover{ color:var(--text-0); border-color:#3a4855; }
+
+span{
+  color:yellow
+}
 
   .symptom-head{
     padding-right:36px;
@@ -315,7 +325,7 @@
 
 <div id="header">
   <div id="brand">
-    <h1>SYNAPTICA <span>— DEPRESSÃO</span></h1>
+    <h1>Depressão e seus sinais <span>— Setembro Amarelo</span></h1>
     <p>Explore os circuitos cerebrais associados aos sintomas depressivos.</p>
   </div>
   <div id="scope-badge">módulo educacional · não diagnóstico</div>
